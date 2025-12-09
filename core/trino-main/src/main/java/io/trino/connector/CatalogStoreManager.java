@@ -48,6 +48,7 @@ public class CatalogStoreManager
     private final AtomicReference<Optional<CatalogStore>> configuredCatalogStore = new AtomicReference<>(Optional.empty());
     private final SecretsResolver secretsResolver;
     private final String catalogStoreKind;
+    private volatile Object catalogManager;
 
     @Inject
     public CatalogStoreManager(SecretsResolver secretsResolver, CatalogStoreConfig catalogStoreConfig)
@@ -115,6 +116,9 @@ public class CatalogStoreManager
     protected void setConfiguredCatalogStore(CatalogStore catalogStore)
     {
         checkState(configuredCatalogStore.compareAndSet(Optional.empty(), Optional.of(catalogStore)), "catalogStore is already set");
+        if (catalogManager != null) {
+            catalogStore.setCatalogManager(catalogManager);
+        }
     }
 
     @Override
@@ -139,6 +143,14 @@ public class CatalogStoreManager
     public void removeCatalog(CatalogName catalogName)
     {
         getCatalogStore().removeCatalog(catalogName);
+    }
+
+    @Override
+    public void setCatalogManager(Object catalogManager)
+    {
+        this.catalogManager = catalogManager;
+        Optional<CatalogStore> store = configuredCatalogStore.get();
+        store.ifPresent(catalogStore -> catalogStore.setCatalogManager(catalogManager));
     }
 
     @VisibleForTesting
